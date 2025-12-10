@@ -1,0 +1,25 @@
+/target/
+/.idea/
+/.vscode/
+/*.iml
+*.class
+*.log
+*.jar
+*.war
+*.zip
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Spring Boot sensitive files
+application.properties
+application.yml
+
+# Uploaded files folder
+uploads/
+
+# Maven
+.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.properties
