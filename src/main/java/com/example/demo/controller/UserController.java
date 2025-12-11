@@ -1,37 +1,49 @@
 package com.example.demo.controller;
 
-import com.example.demo.model.User;
+import com.example.demo.dto.RegisterUserRequest;
 import com.example.demo.model.Post;
-import com.example.demo.service.UserService;
+import com.example.demo.model.User;
 import com.example.demo.repository.PostRepository;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import com.example.demo.security.AuthUtil;
+import com.example.demo.service.MediaService;
+import com.example.demo.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.*;
 
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
+    private final PostRepository postRepository;
+    private final AuthUtil authUtil;
+    private final MediaService mediaService;
 
-    @Autowired
-    private PostRepository postRepository;
+    public UserController(UserService userService,
+                          PostRepository postRepository,
+                          AuthUtil authUtil,
+                          MediaService mediaService) {
+        this.userService = userService;
+        this.postRepository = postRepository;
+        this.authUtil = authUtil;
+        this.mediaService = mediaService;
+    }
 
     // ============================================================
     //                      REGISTER USER
     // ============================================================
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@RequestBody User user) {
+    public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterUserRequest request) {
 
-        if (user.getEmail() == null || user.getEmail().isEmpty())
-            return ResponseEntity.badRequest().body("Email is required");
-
-        if (user.getPassword() == null || user.getPassword().isEmpty())
-            return ResponseEntity.badRequest().body("Password is required");
+        User user = new User();
+        user.setEmail(request.getEmail());
+        user.setPassword(request.getPassword());
+        user.setUsername(request.getUsername());
 
         User created = userService.registerUser(user);
         return ResponseEntity.ok(created);
@@ -61,7 +73,7 @@ public class UserController {
     }
 
     // ============================================================
-    //                       SEARCH USERS
+    //                      SEARCH USERS
     // ============================================================
     @GetMapping("/search")
     public ResponseEntity<?> searchUsers(@RequestParam String query) {
@@ -69,21 +81,17 @@ public class UserController {
     }
 
     // ============================================================
-    //                FOLLOW / UNFOLLOW USERS
+    //                  FOLLOW / UNFOLLOW USERS
     // ============================================================
     @PostMapping("/follow")
-    public ResponseEntity<?> followUser(
-            @RequestParam String followerId,
-            @RequestParam String targetId
-    ) {
+    public ResponseEntity<?> followUser(@RequestParam String targetId) {
+        String followerId = authUtil.getCurrentUserId().toString();
         return ResponseEntity.ok(userService.followUser(followerId, targetId));
     }
 
     @PostMapping("/unfollow")
-    public ResponseEntity<?> unfollowUser(
-            @RequestParam String followerId,
-            @RequestParam String targetId
-    ) {
+    public ResponseEntity<?> unfollowUser(@RequestParam String targetId) {
+        String followerId = authUtil.getCurrentUserId().toString();
         return ResponseEntity.ok(userService.unfollowUser(followerId, targetId));
     }
 
@@ -98,40 +106,39 @@ public class UserController {
     }
 
     // ============================================================
-    //                RECOMMEND USERS TO FOLLOW
+    //              RECOMMEND USERS TO FOLLOW
     // ============================================================
-    @GetMapping("/recommend/{userId}")
-    public ResponseEntity<?> recommendUsers(@PathVariable String userId) {
+    @GetMapping("/recommend/me")
+    public ResponseEntity<?> recommendUsersForCurrentUser() {
+        String userId = authUtil.getCurrentUserId().toString();
         return ResponseEntity.ok(userService.recommendUsers(userId));
     }
 
     // ============================================================
-    //                     SAVE POST
+    //                      SAVE POST
     // ============================================================
     @PostMapping("/save")
-    public ResponseEntity<?> savePost(
-            @RequestParam String userId,
-            @RequestParam String postId
-    ) {
+    public ResponseEntity<?> savePost(@RequestParam String postId) {
+        String userId = authUtil.getCurrentUserId().toString();
         return ResponseEntity.ok(userService.savePost(userId, postId));
     }
 
     // ============================================================
-    //                     UNSAVE POST
+    //                      UNSAVE POST
     // ============================================================
     @PostMapping("/unsave")
-    public ResponseEntity<?> unsavePost(
-            @RequestParam String userId,
-            @RequestParam String postId
-    ) {
+    public ResponseEntity<?> unsavePost(@RequestParam String postId) {
+        String userId = authUtil.getCurrentUserId().toString();
         return ResponseEntity.ok(userService.unsavePost(userId, postId));
     }
 
     // ============================================================
-    //               GET SAVED POSTS LIST
+    //                  GET SAVED POSTS LIST (SELF)
     // ============================================================
-    @GetMapping("/{userId}/saved")
-    public ResponseEntity<?> getSavedPosts(@PathVariable String userId) {
+    @GetMapping("/me/saved")
+    public ResponseEntity<?> getMySavedPosts() {
+
+        String userId = authUtil.getCurrentUserId().toString();
 
         User user = userService.getUserById(userId);
         if (user == null)
@@ -142,18 +149,36 @@ public class UserController {
     }
 
     // ============================================================
-    //               UPDATE USER PROFILE
+    //                  UPDATE USER PROFILE (SELF)
     // ============================================================
-    @PatchMapping("/update/{userId}")
-    public ResponseEntity<?> updateProfile(
-            @PathVariable String userId,
-            @RequestBody User updatedUser
-    ) {
-        User updated = userService.updateProfile(userId, updatedUser);
+    @PatchMapping("/update/me")
+    public ResponseEntity<?> updateProfile(@RequestBody User updatedUser) {
 
+        String userId = authUtil.getCurrentUserId().toString();
+
+        User updated = userService.updateProfile(userId, updatedUser);
         if (updated == null)
             return ResponseEntity.badRequest().body("User not found");
 
         return ResponseEntity.ok(updated);
+    }
+
+    // ============================================================
+    //              UPDATE PROFILE IMAGE (SELF)
+    // ============================================================
+    @PatchMapping("/me/profile-image")
+    public ResponseEntity<?> updateProfileImage(@RequestParam("file") MultipartFile file)
+            throws IOException {
+
+        String userId = authUtil.getCurrentUserId().toString();
+
+        String imageUrl = mediaService.saveFile(file);
+
+        User updated = userService.updateProfileImage(userId, imageUrl);
+        if (updated == null) {
+            return ResponseEntity.badRequest().body("User not found");
+        }
+
+        return ResponseEntity.ok(Map.of("profileImage", imageUrl));
     }
 }

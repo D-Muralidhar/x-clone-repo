@@ -2,8 +2,6 @@ package com.example.demo.service;
 
 import com.example.demo.model.User;
 import com.example.demo.repository.UserRepository;
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -11,8 +9,12 @@ import java.util.*;
 @Service
 public class UserService {
 
-    @Autowired
-    private UserRepository userRepo;
+    private final UserRepository userRepo;
+
+    // --------------- DEPENDENCY INJECTION ---------------
+    public UserService(UserRepository userRepo) {
+        this.userRepo = userRepo;
+    }
 
     // ---------------- REGISTER USER ---------------
     public User registerUser(User user) {
@@ -159,6 +161,16 @@ public class UserService {
         if (updated.getProfileImage() != null) user.setProfileImage(updated.getProfileImage());
         if (updated.getUsername() != null) user.setUsername(updated.getUsername());
 
+        return userRepo.save(user);
+    }
+
+    // ---------------- UPDATE PROFILE IMAGE ONLY ---------------
+    public User updateProfileImage(String userId, String imageUrl) {
+
+        User user = getUserById(userId);
+        if (user == null) return null;
+
+        user.setProfileImage(imageUrl);
         return userRepo.save(user);
     }
 }

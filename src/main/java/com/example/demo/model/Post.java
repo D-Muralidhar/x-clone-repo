@@ -15,6 +15,7 @@ public class Post {
     private String userId;
     private String content;
     private String imageUrl;
+    private String gifUrl;
     private long createdAt;
 
     private List<String> likedBy = new ArrayList<>();
@@ -57,4 +58,8 @@ public class Post {
 
     public int getCommentsCount() { return commentsCount; }
     public void setCommentsCount(int commentsCount) { this.commentsCount = commentsCount; }
+
+    public String getGifUrl() { return gifUrl;}
+    public void setGifUrl(String gifUrl) { this.gifUrl = gifUrl; }
+
 }

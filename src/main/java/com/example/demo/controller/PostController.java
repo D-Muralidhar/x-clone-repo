@@ -3,8 +3,8 @@ package com.example.demo.controller;
 import com.example.demo.model.Comment;
 import com.example.demo.model.Post;
 import com.example.demo.repository.PostRepository;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import com.example.demo.security.AuthUtil;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,31 +15,45 @@ import java.util.Map;
 @RequestMapping("/api/posts")
 public class PostController {
 
-    @Autowired
-    private PostRepository postRepository;
+    private final PostRepository postRepository;
+    private final AuthUtil authUtil;
+
+    public PostController(PostRepository postRepository, AuthUtil authUtil) {
+        this.postRepository = postRepository;
+        this.authUtil = authUtil;
+    }
 
     // ============================================================
-    //                        CREATE POST
+    //                         CREATE POST
     // ============================================================
     @PostMapping("/create")
     public ResponseEntity<?> createPost(@RequestBody Post post) {
 
-        if (post.getUserId() == null || post.getUserId().isEmpty())
-            return ResponseEntity.badRequest().body("Missing userId");
+        String currentUserId = authUtil.getCurrentUserId().toString();
 
-        if (post.getContent() == null || post.getContent().isEmpty())
+        if (post.getContent() == null || post.getContent().isEmpty()) {
             return ResponseEntity.badRequest().body("Missing content");
+        }
 
+        // always take userId from JWT, never from client
+        post.setUserId(currentUserId);
         post.setCreatedAt(System.currentTimeMillis());
+
         return ResponseEntity.ok(postRepository.save(post));
     }
 
     // ============================================================
-    //                        GET POSTS
+    //                         GET POSTS
     // ============================================================
     @GetMapping("/all")
     public List<Post> getAllPosts() {
         return postRepository.findAll();
+    }
+
+    @GetMapping("/user/me")
+    public List<Post> getMyPosts() {
+        String currentUserId = authUtil.getCurrentUserId().toString();
+        return postRepository.findByUserId(currentUserId);
     }
 
     @GetMapping("/user/{userId}")
@@ -48,20 +62,20 @@ public class PostController {
     }
 
     // ============================================================
-    //                        LIKE POST
+    //                         LIKE POST
     // ============================================================
     @PostMapping("/like/{postId}")
-    public ResponseEntity<?> likePost(
-            @PathVariable String postId,
-            @RequestParam String userId
-    ) {
+    public ResponseEntity<?> likePost(@PathVariable String postId) {
+
+        String currentUserId = authUtil.getCurrentUserId().toString();
+
         Post post = postRepository.findById(postId).orElse(null);
-
-        if (post == null)
+        if (post == null) {
             return ResponseEntity.badRequest().body("Post not found");
+        }
 
-        if (!post.getLikedBy().contains(userId)) {
-            post.getLikedBy().add(userId);
+        if (!post.getLikedBy().contains(currentUserId)) {
+            post.getLikedBy().add(currentUserId);
             post.setLikesCount(post.getLikesCount() + 1);
         }
 
@@ -69,22 +83,29 @@ public class PostController {
     }
 
     // ============================================================
-    //                        ADD COMMENT
+    //                         ADD COMMENT
     // ============================================================
     @PostMapping("/comment/{postId}")
     public ResponseEntity<?> addComment(
             @PathVariable String postId,
-            @RequestParam String userId,
-            @RequestParam String text
-    ) {
-        Post post = postRepository.findById(postId).orElse(null);
+            @RequestParam String text,
+            @RequestParam(required = false) String gifUrl) {
 
-        if (post == null)
+        String currentUserId = authUtil.getCurrentUserId().toString();
+
+        Post post = postRepository.findById(postId).orElse(null);
+        if (post == null) {
             return ResponseEntity.badRequest().body("Post not found");
+        }
+
+        if (text == null || text.isEmpty()) {
+            return ResponseEntity.badRequest().body("Missing text");
+        }
 
         Comment comment = new Comment();
-        comment.setUserId(userId);
+        comment.setUserId(currentUserId);
         comment.setText(text);
+        comment.setGifUrl(gifUrl);
         comment.setCreatedAt(System.currentTimeMillis());
 
         post.getComments().add(comment);
@@ -94,41 +115,57 @@ public class PostController {
     }
 
     // ============================================================
-    //                        EDIT COMMENT
+    //                         EDIT COMMENT
     // ============================================================
     @PatchMapping("/comment/edit/{postId}/{index}")
     public ResponseEntity<?> editComment(
             @PathVariable String postId,
             @PathVariable int index,
-            @RequestParam String newText
-    ) {
+            @RequestParam String newText) {
+
+        String currentUserId = authUtil.getCurrentUserId().toString();
+
         Post post = postRepository.findById(postId).orElse(null);
-
-        if (post == null)
+        if (post == null) {
             return ResponseEntity.badRequest().body("Post not found");
+        }
 
-        if (index < 0 || index >= post.getComments().size())
+        if (index < 0 || index >= post.getComments().size()) {
             return ResponseEntity.badRequest().body("Invalid comment index");
+        }
 
-        post.getComments().get(index).setText(newText);
+        Comment comment = post.getComments().get(index);
+        if (!currentUserId.equals(comment.getUserId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You do not own this comment");
+        }
+
+        comment.setText(newText);
         return ResponseEntity.ok(postRepository.save(post));
     }
 
     // ============================================================
-    //                        DELETE COMMENT
+    //                         DELETE COMMENT
     // ============================================================
     @DeleteMapping("/comment/{postId}/{index}")
     public ResponseEntity<?> deleteComment(
             @PathVariable String postId,
-            @PathVariable int index
-    ) {
+            @PathVariable int index) {
+
+        String currentUserId = authUtil.getCurrentUserId().toString();
+
         Post post = postRepository.findById(postId).orElse(null);
-
-        if (post == null)
+        if (post == null) {
             return ResponseEntity.badRequest().body("Post not found");
+        }
 
-        if (index < 0 || index >= post.getComments().size())
+        if (index < 0 || index >= post.getComments().size()) {
             return ResponseEntity.badRequest().body("Invalid comment index");
+        }
+
+        Comment comment = post.getComments().get(index);
+        if (!currentUserId.equals(comment.getUserId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You do not own this comment");
+        }
 
         post.getComments().remove(index);
         post.setCommentsCount(post.getComments().size());
@@ -137,35 +174,53 @@ public class PostController {
     }
 
     // ============================================================
-    //                        EDIT POST
+    //                         EDIT POST
     // ============================================================
     @PatchMapping("/edit/{postId}")
     public ResponseEntity<?> editPost(
             @PathVariable String postId,
-            @RequestBody Map<String, String> updates
-    ) {
+            @RequestBody Map<String, String> updates) {
+
+        String currentUserId = authUtil.getCurrentUserId().toString();
+
         Post post = postRepository.findById(postId).orElse(null);
-
-        if (post == null)
+        if (post == null) {
             return ResponseEntity.badRequest().body("Post not found");
+        }
 
-        if (updates.containsKey("content"))
+        if (!currentUserId.equals(post.getUserId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You do not own this post");
+        }
+
+        if (updates.containsKey("content")) {
             post.setContent(updates.get("content"));
-
-        if (updates.containsKey("imageUrl"))
+        }
+        if (updates.containsKey("imageUrl")) {
             post.setImageUrl(updates.get("imageUrl"));
+        }
+        if (updates.containsKey("gifUrl")) {
+            post.setGifUrl(updates.get("gifUrl"));
+        }
 
         return ResponseEntity.ok(postRepository.save(post));
     }
 
     // ============================================================
-    //                        DELETE POST
+    //                         DELETE POST
     // ============================================================
     @DeleteMapping("/{postId}")
     public ResponseEntity<?> deletePost(@PathVariable String postId) {
 
-        if (!postRepository.existsById(postId))
+        String currentUserId = authUtil.getCurrentUserId().toString();
+
+        Post post = postRepository.findById(postId).orElse(null);
+        if (post == null) {
             return ResponseEntity.badRequest().body("Post not found");
+        }
+
+        if (!currentUserId.equals(post.getUserId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You do not own this post");
+        }
 
         postRepository.deleteById(postId);
         return ResponseEntity.ok("Post deleted successfully");
