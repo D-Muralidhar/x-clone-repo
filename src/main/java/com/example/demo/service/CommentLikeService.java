@@ -14,6 +14,7 @@ public class CommentLikeService {
         this.commentLikeRepository = commentLikeRepository;
     }
 
+    // --------------- LIKE COMMENT ---------------
     @Transactional
     public void like(String userId, String commentId) {
         if (commentLikeRepository.existsByUserIdAndCommentId(userId, commentId)) {
@@ -28,11 +29,14 @@ public class CommentLikeService {
         commentLikeRepository.save(like);
     }
 
+    // --------------- UNLIKE COMMENT ---------------
     @Transactional
     public void unlike(String userId, String commentId) {
         commentLikeRepository.deleteByUserIdAndCommentId(userId, commentId);
     }
 
+    // --------------- COUNT LIKES ---------------
+    @Transactional(readOnly = true)
     public long countLikes(String commentId) {
         return commentLikeRepository.countByCommentId(commentId);
     }

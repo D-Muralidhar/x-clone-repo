@@ -29,7 +29,7 @@ public class PostController {
     @PostMapping("/create")
     public ResponseEntity<?> createPost(@RequestBody Post post) {
 
-        String currentUserId = authUtil.getCurrentUserId().toString();
+        String currentUserId = authUtil.getCurrentUserId();
 
         if (post.getContent() == null || post.getContent().isEmpty()) {
             return ResponseEntity.badRequest().body("Missing content");
@@ -52,7 +52,7 @@ public class PostController {
 
     @GetMapping("/user/me")
     public List<Post> getMyPosts() {
-        String currentUserId = authUtil.getCurrentUserId().toString();
+        String currentUserId = authUtil.getCurrentUserId();
         return postRepository.findByUserId(currentUserId);
     }
 
@@ -67,7 +67,7 @@ public class PostController {
     @PostMapping("/like/{postId}")
     public ResponseEntity<?> likePost(@PathVariable String postId) {
 
-        String currentUserId = authUtil.getCurrentUserId().toString();
+        String currentUserId = authUtil.getCurrentUserId();
 
         Post post = postRepository.findById(postId).orElse(null);
         if (post == null) {
@@ -91,7 +91,7 @@ public class PostController {
             @RequestParam String text,
             @RequestParam(required = false) String gifUrl) {
 
-        String currentUserId = authUtil.getCurrentUserId().toString();
+        String currentUserId = authUtil.getCurrentUserId();
 
         Post post = postRepository.findById(postId).orElse(null);
         if (post == null) {
@@ -123,7 +123,7 @@ public class PostController {
             @PathVariable int index,
             @RequestParam String newText) {
 
-        String currentUserId = authUtil.getCurrentUserId().toString();
+        String currentUserId = authUtil.getCurrentUserId();
 
         Post post = postRepository.findById(postId).orElse(null);
         if (post == null) {
@@ -151,7 +151,7 @@ public class PostController {
             @PathVariable String postId,
             @PathVariable int index) {
 
-        String currentUserId = authUtil.getCurrentUserId().toString();
+        String currentUserId = authUtil.getCurrentUserId();
 
         Post post = postRepository.findById(postId).orElse(null);
         if (post == null) {
@@ -181,7 +181,7 @@ public class PostController {
             @PathVariable String postId,
             @RequestBody Map<String, String> updates) {
 
-        String currentUserId = authUtil.getCurrentUserId().toString();
+        String currentUserId = authUtil.getCurrentUserId();
 
         Post post = postRepository.findById(postId).orElse(null);
         if (post == null) {
@@ -211,7 +211,7 @@ public class PostController {
     @DeleteMapping("/{postId}")
     public ResponseEntity<?> deletePost(@PathVariable String postId) {
 
-        String currentUserId = authUtil.getCurrentUserId().toString();
+        String currentUserId = authUtil.getCurrentUserId();
 
         Post post = postRepository.findById(postId).orElse(null);
         if (post == null) {

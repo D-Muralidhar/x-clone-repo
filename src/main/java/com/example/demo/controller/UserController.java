@@ -85,13 +85,13 @@ public class UserController {
     // ============================================================
     @PostMapping("/follow")
     public ResponseEntity<?> followUser(@RequestParam String targetId) {
-        String followerId = authUtil.getCurrentUserId().toString();
+        String followerId = authUtil.getCurrentUserId();
         return ResponseEntity.ok(userService.followUser(followerId, targetId));
     }
 
     @PostMapping("/unfollow")
     public ResponseEntity<?> unfollowUser(@RequestParam String targetId) {
-        String followerId = authUtil.getCurrentUserId().toString();
+        String followerId = authUtil.getCurrentUserId();
         return ResponseEntity.ok(userService.unfollowUser(followerId, targetId));
     }
 
@@ -110,7 +110,7 @@ public class UserController {
     // ============================================================
     @GetMapping("/recommend/me")
     public ResponseEntity<?> recommendUsersForCurrentUser() {
-        String userId = authUtil.getCurrentUserId().toString();
+        String userId = authUtil.getCurrentUserId();
         return ResponseEntity.ok(userService.recommendUsers(userId));
     }
 
@@ -119,7 +119,7 @@ public class UserController {
     // ============================================================
     @PostMapping("/save")
     public ResponseEntity<?> savePost(@RequestParam String postId) {
-        String userId = authUtil.getCurrentUserId().toString();
+        String userId = authUtil.getCurrentUserId();
         return ResponseEntity.ok(userService.savePost(userId, postId));
     }
 
@@ -138,7 +138,7 @@ public class UserController {
     @GetMapping("/me/saved")
     public ResponseEntity<?> getMySavedPosts() {
 
-        String userId = authUtil.getCurrentUserId().toString();
+        String userId = authUtil.getCurrentUserId();
 
         User user = userService.getUserById(userId);
         if (user == null)
@@ -154,7 +154,7 @@ public class UserController {
     @PatchMapping("/update/me")
     public ResponseEntity<?> updateProfile(@RequestBody User updatedUser) {
 
-        String userId = authUtil.getCurrentUserId().toString();
+        String userId = authUtil.getCurrentUserId();
 
         User updated = userService.updateProfile(userId, updatedUser);
         if (updated == null)
@@ -170,7 +170,7 @@ public class UserController {
     public ResponseEntity<?> updateProfileImage(@RequestParam("file") MultipartFile file)
             throws IOException {
 
-        String userId = authUtil.getCurrentUserId().toString();
+        String userId = authUtil.getCurrentUserId();
 
         String imageUrl = mediaService.saveFile(file);
 

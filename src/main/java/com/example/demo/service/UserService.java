@@ -3,6 +3,7 @@ package com.example.demo.service;
 import com.example.demo.model.User;
 import com.example.demo.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
@@ -17,6 +18,7 @@ public class UserService {
     }
 
     // ---------------- REGISTER USER ---------------
+    @Transactional
     public User registerUser(User user) {
         user.setFollowers(new ArrayList<>());
         user.setFollowing(new ArrayList<>());
@@ -25,11 +27,13 @@ public class UserService {
     }
 
     // ---------------- FIND USER BY ID ---------------
+    @Transactional(readOnly = true)
     public User getUserById(String id) {
         return userRepo.findById(id).orElse(null);
     }
 
     // ---------------- SEARCH USERS ---------------
+    @Transactional(readOnly = true)
     public List<User> searchUsers(String query) {
         return userRepo
                 .findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCaseOrBioContainingIgnoreCase(
@@ -38,6 +42,7 @@ public class UserService {
     }
 
     // ---------------- FOLLOW USER ---------------
+    @Transactional
     public Map<String, Object> followUser(String followerId, String targetId) {
 
         if (followerId.equals(targetId))
@@ -66,6 +71,7 @@ public class UserService {
     }
 
     // ---------------- UNFOLLOW USER ---------------
+    @Transactional
     public Map<String, Object> unfollowUser(String followerId, String targetId) {
 
         if (followerId.equals(targetId))
@@ -87,6 +93,7 @@ public class UserService {
     }
 
     // ---------------- GET FOLLOWERS ---------------
+    @Transactional(readOnly = true)
     public List<User> getFollowers(String userId) {
         User user = getUserById(userId);
         if (user == null) return new ArrayList<>();
@@ -94,6 +101,7 @@ public class UserService {
     }
 
     // ---------------- GET FOLLOWING ---------------
+    @Transactional(readOnly = true)
     public List<User> getFollowing(String userId) {
         User user = getUserById(userId);
         if (user == null) return new ArrayList<>();
@@ -101,6 +109,7 @@ public class UserService {
     }
 
     // ---------------- RECOMMEND USERS ---------------
+    @Transactional(readOnly = true)
     public List<User> recommendUsers(String userId) {
 
         User currentUser = getUserById(userId);
@@ -124,6 +133,7 @@ public class UserService {
     }
 
     // ---------------- SAVE POST ---------------
+    @Transactional
     public Map<String, Object> savePost(String userId, String postId) {
         User user = getUserById(userId);
         if (user == null) return Map.of("error", "User not found");
@@ -140,6 +150,7 @@ public class UserService {
     }
 
     // ---------------- UNSAVE POST ---------------
+    @Transactional
     public Map<String, Object> unsavePost(String userId, String postId) {
         User user = getUserById(userId);
         if (user == null) return Map.of("error", "User not found");
@@ -151,6 +162,7 @@ public class UserService {
     }
 
     // ---------------- UPDATE PROFILE ---------------
+    @Transactional
     public User updateProfile(String userId, User updated) {
 
         User user = getUserById(userId);
@@ -165,6 +177,7 @@ public class UserService {
     }
 
     // ---------------- UPDATE PROFILE IMAGE ONLY ---------------
+    @Transactional
     public User updateProfileImage(String userId, String imageUrl) {
 
         User user = getUserById(userId);
