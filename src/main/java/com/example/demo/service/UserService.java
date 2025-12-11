@@ -11,11 +11,15 @@ import java.util.*;
 public class UserService {
 
     private final UserRepository userRepo;
+    private final NotificationService notificationService;
 
     // --------------- DEPENDENCY INJECTION ---------------
-    public UserService(UserRepository userRepo) {
+    public UserService(UserRepository userRepo,
+                   NotificationService notificationService) {
         this.userRepo = userRepo;
+        this.notificationService = notificationService;
     }
+
 
     // ---------------- REGISTER USER ---------------
     @Transactional
@@ -63,12 +67,22 @@ public class UserService {
         userRepo.save(follower);
         userRepo.save(target);
 
+        // --------------- NOTIFICATION FOR FOLLOW ---------------
+        notificationService.notifyUser(
+                targetId,          // receiver
+                followerId,        // who followed
+                "FOLLOW",
+                follower.getUsername() + " started following you",
+                null               // no specific reference id
+        );
+
         return Map.of(
                 "message", "Followed successfully",
                 "followerId", followerId,
                 "targetId", targetId
         );
     }
+
 
     // ---------------- UNFOLLOW USER ---------------
     @Transactional

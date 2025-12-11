@@ -4,6 +4,7 @@ import com.example.demo.model.Comment;
 import com.example.demo.model.Post;
 import com.example.demo.repository.PostRepository;
 import com.example.demo.security.AuthUtil;
+import com.example.demo.service.NotificationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,10 +18,14 @@ public class PostController {
 
     private final PostRepository postRepository;
     private final AuthUtil authUtil;
+    private final NotificationService notificationService;
 
-    public PostController(PostRepository postRepository, AuthUtil authUtil) {
+    public PostController(PostRepository postRepository,
+                          AuthUtil authUtil,
+                          NotificationService notificationService) {
         this.postRepository = postRepository;
         this.authUtil = authUtil;
+        this.notificationService = notificationService;
     }
 
     // ============================================================
@@ -74,12 +79,27 @@ public class PostController {
             return ResponseEntity.badRequest().body("Post not found");
         }
 
+        boolean added = false;
         if (!post.getLikedBy().contains(currentUserId)) {
             post.getLikedBy().add(currentUserId);
             post.setLikesCount(post.getLikesCount() + 1);
+            added = true;
         }
 
-        return ResponseEntity.ok(postRepository.save(post));
+        Post saved = postRepository.save(post);
+
+        // --------------- NOTIFICATION FOR LIKE POST ---------------
+        if (added && !currentUserId.equals(post.getUserId())) {
+            notificationService.notifyUser(
+                    post.getUserId(),          // receiver = post owner
+                    currentUserId,             // who liked
+                    "LIKE_POST",
+                    "liked your post",
+                    postId
+            );
+        }
+
+        return ResponseEntity.ok(saved);
     }
 
     // ============================================================
@@ -111,7 +131,20 @@ public class PostController {
         post.getComments().add(comment);
         post.setCommentsCount(post.getComments().size());
 
-        return ResponseEntity.ok(postRepository.save(post));
+        Post saved = postRepository.save(post);
+
+        // --------------- NOTIFICATION FOR COMMENT ---------------
+        if (!currentUserId.equals(post.getUserId())) {
+            notificationService.notifyUser(
+                    post.getUserId(),      // receiver = post owner
+                    currentUserId,         // who commented
+                    "COMMENT",
+                    "commented on your post",
+                    postId
+            );
+        }
+
+        return ResponseEntity.ok(saved);
     }
 
     // ============================================================
