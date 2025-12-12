@@ -9,6 +9,7 @@ import com.example.demo.service.MediaService;
 import com.example.demo.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,15 +24,18 @@ public class UserController {
     private final PostRepository postRepository;
     private final AuthUtil authUtil;
     private final MediaService mediaService;
+    private final PasswordEncoder passwordEncoder;
 
     public UserController(UserService userService,
                           PostRepository postRepository,
                           AuthUtil authUtil,
-                          MediaService mediaService) {
+                          MediaService mediaService,
+                          PasswordEncoder passwordEncoder) {
         this.userService = userService;
         this.postRepository = postRepository;
         this.authUtil = authUtil;
         this.mediaService = mediaService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     // ============================================================
@@ -42,8 +46,9 @@ public class UserController {
 
         User user = new User();
         user.setEmail(request.getEmail());
-        user.setPassword(request.getPassword());
         user.setUsername(request.getUsername());
+        // encode the raw password before saving
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
 
         User created = userService.registerUser(user);
         return ResponseEntity.ok(created);
