@@ -31,7 +31,7 @@ public class AuthController {
         }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            return ResponseEntity.status(401).body("Invalid password");
+            return ResponseEntity.status(402).body("Invalid password");
         }
 
         String token = JwtUtil.generateToken(user.getEmail());
